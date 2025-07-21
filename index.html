@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foot Deformity AI - Medical Multi-Classification System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        /* Navigation */
+        .navbar {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            padding: 1rem 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+        }
+
+        .logo {
+            color: white;
+            font-size: 1.8rem;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #74b9ff;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 120px 0 80px;
+            text-align: center;
+        }
+
+        .hero-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            font-weight: 300;
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .cta-button {
+            background: #e74c3c;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(231, 76, 60, 0.3);
+        }
+
+        /* Features Section */
+        .features {
+            padding: 80px 0;
+            background: #f8f9fa;
+        }
+
+        .features-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            color: #2c3e50;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #3498db;
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #2c3e50;
+        }
+
+        /* Classifications Section */
+        .classifications {
+            padding: 80px 0;
+            background: white;
+        }
+
+        .classifications-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .classification-card {
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .classification-card:hover {
+            transform: scale(1.05);
+        }
+
+        .classification-card i {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .classification-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Stats Section */
+        .stats {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 60px 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* Footer */
+        .footer {
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .features-grid,
+            .classifications-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="#" class="logo">
+                <i class="fas fa-stethoscope"></i> Foot Deformity AI
+            </a>
+            <ul class="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#classifications">Classifications</a></li>
+                <li><a href="dashboard.html">Dashboard</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-container">
+            <h1>AI-Powered Foot Deformity Detection</h1>
+            <p>Advanced multi-classification system for medical diagnosis using MONAI DenseNet121</p>
+            <a href="dashboard.html" class="cta-button">
+                <i class="fas fa-chart-line"></i> Start Diagnosis
+            </a>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="features-container">
+            <h2 class="section-title">Advanced Medical AI Features</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3>MONAI DenseNet121</h3>
+                    <p>State-of-the-art medical AI architecture specifically designed for medical image analysis with 98.8% accuracy.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-eye"></i>
+                    </div>
+                    <h3>Multi-Classification</h3>
+                    <p>Simultaneously detects Normal, Flatfoot, Foot Ulcer, and Hallux Valgus conditions from X-ray images.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h3>Real-time Analysis</h3>
+                    <p>Lightning-fast inference in ~96ms per image with confidence scores and probability distributions.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Medical Grade</h3>
+                    <p>99.6% Hallux Valgus recall rate ensuring virtually no missed cases in critical diagnoses.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Classifications Section -->
+    <section id="classifications" class="classifications">
+        <div class="features-container">
+            <h2 class="section-title">Supported Classifications</h2>
+            <div class="classifications-grid">
+                <div class="classification-card">
+                    <i class="fas fa-check-circle"></i>
+                    <h3>Normal</h3>
+                    <p>Healthy foot structure</p>
+                </div>
+                <div class="classification-card">
+                    <i class="fas fa-foot-print"></i>
+                    <h3>Flatfoot</h3>
+                    <p>Collapsed arch condition</p>
+                </div>
+                <div class="classification-card">
+                    <i class="fas fa-band-aid"></i>
+                    <h3>Foot Ulcer</h3>
+                    <p>Open wounds or sores</p>
+                </div>
+                <div class="classification-card">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Hallux Valgus</h3>
+                    <p>Bunion deformity</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number">99.6%</div>
+                <div class="stat-label">Hallux Valgus Recall</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">98.8%</div>
+                <div class="stat-label">Overall Accuracy</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">96ms</div>
+                <div class="stat-label">Inference Time</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">4</div>
+                <div class="stat-label">Classifications</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2025 Foot Deformity AI - Medical Multi-Classification System. Powered by MONAI.</p>
+    </footer>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Add scroll effect to navbar
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                navbar.style.background = 'rgba(44, 62, 80, 0.95)';
+            } else {
+                navbar.style.background = 'linear-gradient(135deg, #2c3e50 0%, #3498db 100%)';
+            }
+        });
+    </script>
+</body>
+</html>

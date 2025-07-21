@@ -1,0 +1,9 @@
+Flask
+flask-cors
+torch
+torchvision
+Pillow
+monai
+requests
+python-dotenv
+gunicorn 
