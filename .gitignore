@@ -3,3 +3,6 @@ node_modules/
 KnowledgeBase/chapmans-orthopaedic-surgery-third-edition.pdf
 embeddings.npy
 faiss_index.faiss
+Dataset
+processed_dataset
+.env

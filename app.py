@@ -22,16 +22,15 @@ from threading import Lock
 import requests
 from dotenv import load_dotenv
 import traceback
-# Temporarily disable problematic imports
-# import os
-# import glob
-# import PyPDF2
-# import docx
-# import csv
-# import faiss
-# from sentence_transformers import SentenceTransformer
-# import numpy as np
-# import hashlib
+import os
+import glob
+import PyPDF2
+import docx
+import csv
+import faiss
+from sentence_transformers import SentenceTransformer
+import numpy as np
+import hashlib
 
 # MONAI imports
 try:
@@ -54,7 +53,11 @@ logger = logging.getLogger(__name__)
 ANALYTICS_LOG = 'analytics_log.jsonl'
 ANALYTICS_LOCK = Lock()
 
-OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
+# Temporary hardcoded API key for testing
+OPENROUTER_API_KEY = "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"
+
+# Comment out the environment variable loading for now
+# OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 if not OPENROUTER_API_KEY:
     raise RuntimeError("OPENROUTER_API_KEY environment variable not set. Please add it to your .env file.")
 
@@ -64,16 +67,108 @@ EMBED_MODEL = 'all-MiniLM-L6-v2'
 CHUNK_SIZE = 400  # characters per chunk
 TOP_K = 3
 
-# Temporarily disable RAG functionality
 # Load embedding model
-# embedder = SentenceTransformer(EMBED_MODEL)
+embedder = SentenceTransformer(EMBED_MODEL)
 
 # Store passages and their embeddings
 passages = []
 embeddings = []
 index = None # Initialize index to None
 
-print("⚠️ RAG functionality temporarily disabled due to dependency issues")
+# Helper: chunk text
+def chunk_text(text, chunk_size=CHUNK_SIZE):
+    return [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
+
+def compute_kb_hash(kb_folder):
+    hash_md5 = hashlib.md5()
+    for root, dirs, files in os.walk(kb_folder):
+        for fname in sorted(files):
+            fpath = os.path.join(root, fname)
+            hash_md5.update(fname.encode())
+            with open(fpath, "rb") as f:
+                while True:
+                    chunk = f.read(8192)
+                    if not chunk:
+                        break
+                    hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
+# Helper: load and chunk all files
+def load_knowledge_base():
+    global passages, embeddings, index
+    passages = []
+    # PDFs
+    for pdf_path in glob.glob(os.path.join(KNOWLEDGE_BASE_DIR, '*.pdf')):
+        try:
+            with open(pdf_path, 'rb') as f:
+                reader = PyPDF2.PdfReader(f)
+                for page in reader.pages:
+                    text = page.extract_text() or ''
+                    for chunk in chunk_text(text):
+                        passages.append(chunk)
+        except Exception as e:
+            print(f'Error reading PDF {pdf_path}:', e)
+    # DOCX
+    for docx_path in glob.glob(os.path.join(KNOWLEDGE_BASE_DIR, '*.docx')):
+        try:
+            doc = docx.Document(docx_path)
+            full_text = '\n'.join([p.text for p in doc.paragraphs])
+            for chunk in chunk_text(full_text):
+                passages.append(chunk)
+        except Exception as e:
+            print(f'Error reading DOCX {docx_path}:', e)
+    # CSV
+    for csv_path in glob.glob(os.path.join(KNOWLEDGE_BASE_DIR, '*.csv')):
+        try:
+            with open(csv_path, 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    for cell in row:
+                        for chunk in chunk_text(cell):
+                            passages.append(chunk)
+        except Exception as e:
+            print(f'Error reading CSV {csv_path}:', e)
+    # Compute knowledge base hash
+    kb_hash = compute_kb_hash(KNOWLEDGE_BASE_DIR)
+    hash_file = "kb_hash.txt"
+    emb_file = "embeddings.npy"
+    faiss_file = "faiss_index.faiss"
+
+    # Check if all files exist and hash matches
+    if (os.path.exists(hash_file) and os.path.exists(emb_file) and os.path.exists(faiss_file)):
+        with open(hash_file, "r") as f:
+            saved_hash = f.read().strip()
+        if saved_hash == kb_hash:
+            print("Knowledge base unchanged. Loading embeddings and index from disk...")
+            emb = np.load(emb_file)
+            embeddings.clear()
+            embeddings.extend(emb)
+            index = faiss.read_index(faiss_file)
+            return
+
+    # Otherwise, recompute
+    if passages:
+        print(f'Embedding {len(passages)} passages...')
+        emb = embedder.encode(passages, show_progress_bar=True, convert_to_numpy=True)
+        embeddings.clear()
+        embeddings.extend(emb)
+        # Build FAISS index
+        d = emb.shape[1]
+        index = faiss.IndexFlatL2(d)
+        index.add(np.array(embeddings))
+        print('Knowledge base loaded and indexed.')
+        # Save to disk
+        np.save(emb_file, emb)
+        faiss.write_index(index, faiss_file)
+        with open(hash_file, "w") as f:
+            f.write(kb_hash)
+    else:
+        print('No passages found in knowledge base.')
+        embeddings.clear()
+        index = None
+
+# Load KB on startup
+load_knowledge_base()
 
 class FootDeformityClassifier:
     """Professional foot deformity classification using MONAI DenseNet"""
@@ -460,132 +555,29 @@ def analytics_download():
 
 @app.route('/api/recommendation', methods=['POST'])
 def get_recommendation():
-    data = request.get_json()
-    prediction = data.get('prediction')
-    if not prediction:
-        return jsonify({'error': 'No prediction provided'}), 400
+    try:
+        data = request.get_json()
+        prediction = data.get('prediction')
+        if not prediction:
+            return jsonify({'error': 'No prediction provided'}), 400
 
-    # Accept both string and dict for class name
-    if isinstance(prediction, str):
-        pred_class = prediction
-    elif isinstance(prediction, dict):
-        pred_class = (
-            prediction.get('prediction') or
-            prediction.get('predicted_class') or
-            prediction.get('class')
-        )
-    else:
-        pred_class = None
-
-    if not pred_class:
-        return jsonify({'error': 'Invalid prediction format'}), 400
-
-    # Normalize class name (case-insensitive, strip whitespace)
-    pred_class_norm = str(pred_class).strip().lower()
-
-    # Map normalized class names to canonical keys
-    class_map = {
-        'normal': 'Normal',
-        'flatfoot': 'Flatfoot',
-        'foot ulcer': 'Foot Ulcer',
-        'hallux valgus': 'Hallux Valgus',
-    }
-    mapped_class = class_map.get(pred_class_norm)
-
-    # Structured recommendations
-    recommendations = {
-        'Normal': {
-            'title': '✅ Normal Foot Structure Detected',
-            'priority': 'Routine Care',
-            'immediate_actions': [
-                'Continue current foot care routine',
-                'Maintain healthy weight and activity level',
-                'Wear properly fitted, supportive footwear'
-            ],
-            'follow_up': [
-                'Schedule annual foot health check-ups',
-                'Monitor for any changes in foot structure or comfort',
-                'Maintain good foot hygiene practices'
-            ],
-            'lifestyle_tips': [
-                'Regular stretching and foot exercises',
-                'Choose appropriate footwear for activities',
-                'Keep feet clean and dry'
-            ]
-        },
-        'Flatfoot': {
-            'title': '⚠️ Flatfoot (Pes Planus) Detected',
-            'priority': 'Moderate - Requires Attention',
-            'immediate_actions': [
-                'Consult with a podiatrist or orthopedic specialist',
-                'Consider custom orthotic inserts or arch supports',
-                'Switch to supportive, motion-control footwear'
-            ],
-            'follow_up': [
-                'Physical therapy evaluation for foot strengthening',
-                'Regular monitoring of symptoms and progression',
-                'Follow-up appointment in 4-6 weeks'
-            ],
-            'lifestyle_tips': [
-                'Avoid prolonged standing on hard surfaces',
-                'Perform calf stretches and foot strengthening exercises',
-                'Maintain healthy weight to reduce foot stress'
-            ]
-        },
-        'Foot Ulcer': {
-            'title': '🚨 Foot Ulcer Detected - Urgent Care Required',
-            'priority': 'HIGH PRIORITY - Immediate Medical Attention',
-            'immediate_actions': [
-                'Seek immediate medical attention from wound care specialist',
-                'Keep wound clean and covered with sterile dressing',
-                'Avoid weight-bearing on affected foot if possible',
-                'Do NOT attempt self-treatment'
-            ],
-            'follow_up': [
-                'Daily wound assessment and dressing changes',
-                'Regular follow-up with healthcare provider',
-                'Monitor for signs of infection (redness, warmth, discharge)'
-            ],
-            'lifestyle_tips': [
-                'Strict blood sugar control if diabetic',
-                'Proper nutrition to support wound healing',
-                'Avoid smoking and alcohol which impair healing'
-            ]
-        },
-        'Hallux Valgus': {
-            'title': '👣 Hallux Valgus (Bunion) Detected',
-            'priority': 'Moderate - Progressive Condition',
-            'immediate_actions': [
-                'Consult with podiatrist for severity assessment',
-                'Switch to wide-toe box, low-heel footwear',
-                'Use bunion pads or toe spacers for comfort'
-            ],
-            'follow_up': [
-                'Regular monitoring of deformity progression',
-                'Physical therapy for toe mobility and strength',
-                'Surgical consultation if conservative treatment fails'
-            ],
-            'lifestyle_tips': [
-                'Avoid high heels and narrow, pointed shoes',
-                'Perform toe stretching and strengthening exercises',
-                'Apply ice for pain and inflammation relief'
-            ]
+        pred_class = prediction.get('prediction')
+        confidence = prediction.get('confidence')
+        
+        # Professional medical recommendations
+        recommendations = {
+            "Normal": f"Based on the {confidence}% confidence normal classification, continue regular foot hygiene and monitoring. Schedule annual podiatric check-ups for preventive care.",
+            "Flatfoot": f"With {confidence}% confidence flatfoot detection, recommend orthotic evaluation, supportive footwear assessment, and physical therapy consultation for arch strengthening exercises.",
+            "Foot Ulcer": f"URGENT: {confidence}% confidence ulcer detection requires immediate medical attention. Seek wound care specialist, maintain strict foot hygiene, and monitor for infection signs.",
+            "Hallux Valgus": f"Based on {confidence}% confidence bunion detection, consider conservative management with proper footwear, toe spacers, and orthopedic consultation for treatment options."
         }
-    }
-
-    # Fallback recommendation if class is not recognized
-    if mapped_class and mapped_class in recommendations:
-        recommendation = recommendations[mapped_class]
-    else:
-        recommendation = {
-            'title': f'Consultation Required for {pred_class}',
-            'priority': 'Consult Specialist',
-            'immediate_actions': ['Consult with a medical professional for proper diagnosis and treatment.'],
-            'follow_up': [],
-            'lifestyle_tips': []
-        }
-
-    return jsonify({'recommendation': recommendation})
+        
+        recommendation = recommendations.get(pred_class, "Consult with a medical professional for comprehensive evaluation and personalized treatment plan.")
+        return jsonify({"recommendation": recommendation})
+        
+    except Exception as e:
+        print(f"Recommendation error: {e}")
+        return jsonify({"error": "Unable to generate recommendation"}), 500
 
 @app.route('/api/voice-assistant', methods=['POST'])
 def voice_assistant():
@@ -651,7 +643,55 @@ def voice_assistant():
 
 @app.route('/api/rag-assistant', methods=['POST'])
 def rag_assistant():
-    return jsonify({'error': 'RAG functionality temporarily disabled due to dependency issues'}), 503
+    data = request.get_json()
+    question = data.get('question')
+    if not question:
+        return jsonify({'error': 'No question provided'}), 400
+    if not passages or not embeddings or index is None:
+        return jsonify({'error': 'Knowledge base not loaded'}), 500
+    # Embed question
+    q_emb = embedder.encode([question], convert_to_numpy=True)
+    # Retrieve top passages
+    D, I = index.search(q_emb, TOP_K)
+    retrieved = [passages[i] for i in I[0] if i < len(passages)]
+    context = '\n'.join(retrieved)
+    # Build improved prompt for DeepSeek
+    prompt = (
+        "You are a helpful orthopaedic assistant. "
+        "Given the following context, answer the user's question in a clear, precise, and human-friendly way. "
+        "Do not mention 'provided context', 'based on the context', or similar phrases. "
+        "If listing steps or items, use concise bullet points.\n"
+        f"Context:\n{context}\n\nQuestion: {question}\nAnswer:"
+    )
+    # Call DeepSeek via OpenRouter
+    try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "deepseek/deepseek-r1-0528:free",
+                "messages": [
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": prompt}
+                ],
+                "max_tokens": 400
+            },
+            timeout=60
+        )
+        response.raise_for_status()
+        data = response.json()
+        choice = data.get("choices", [{}])[0].get("message", {})
+        answer = choice.get("content") or choice.get("reasoning", "Sorry, I couldn't find an answer.")
+        # Post-process: remove unwanted phrases
+        for phrase in ["Based solely on the provided context", "Based on the provided context", "Based on the context", "provided context", "context provided", "Based on context"]:
+            answer = answer.replace(phrase, "").strip()
+        return jsonify({"answer": answer, "context": context})
+    except Exception as e:
+        print('RAG DeepSeek error:', e)
+        return jsonify({'error': f'Failed to get answer from DeepSeek: {str(e)}'}), 500
 
 @app.route('/api/tts', methods=['POST'])
 def tts():
@@ -693,5 +733,11 @@ def internal_error(e):
     return jsonify({"error": "Internal server error"}), 500
 
 if __name__ == '__main__':
-    # For local development only. Render uses Gunicorn and ignores this block.
     app.run(debug=True, host='0.0.0.0', port=5000) 
+
+
+
+
+
+
+

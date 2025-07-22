@@ -278,7 +278,7 @@ const Dashboard = () => {
                 <div>
                   <h3 className="text-sm font-medium text-gray-700 mb-3">Confidence Breakdown</h3>
                   <div className="space-y-3">
-                    {Object.entries(prediction && prediction.probabilities ? prediction.probabilities : {}).map(([className, confidence]) => (
+                    {Object.entries(prediction.probabilities).map(([className, confidence]) => (
                       <div key={className} className="flex items-center justify-between">
                         <span className="text-sm text-gray-600">{className}</span>
                         <div className="flex items-center space-x-2">
@@ -345,7 +345,7 @@ const Dashboard = () => {
                       a: (props) => <a {...props} target="_blank" rel="noopener noreferrer" />
                     }}
                   >
-                    {typeof recommendation === 'string' && recommendation.trim() ? recommendation : 'No recommendation available.'}
+                    {recommendation && recommendation.trim() ? recommendation : 'No recommendation available.'}
                   </ReactMarkdown>
                   </div>
               )}
