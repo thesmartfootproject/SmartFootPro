@@ -1,6 +1,7 @@
 # Foot Deformity AI - Professional Classification System
-
 A professional-grade web application for AI-powered foot deformity classification using advanced deep learning models.
+
+<img width="1917" height="905" alt="Screenshot 2025-08-09 145858" src="https://github.com/user-attachments/assets/3c96c00e-8446-4d3a-a5d2-d8a44fd731b4" />
 
 ## 🚀 Features
 
@@ -16,7 +17,7 @@ A professional-grade web application for AI-powered foot deformity classificatio
 
 ### Backend (Python/Flask)
 - **Framework**: Flask with CORS support
-- **AI Model**: MONAI DenseNet121 for medical image analysis
+- **AI Model**: MONAI DenseNet121 , VIT and Resnet50 for medical image analysis
 - **Image Processing**: PIL and torchvision transforms
 - **API**: RESTful endpoints with JSON responses
 
