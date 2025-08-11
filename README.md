@@ -28,6 +28,19 @@ A professional-grade web application for AI-powered foot deformity classificatio
 - **Charts**: Chart.js for analytics visualization
 - **File Upload**: React Dropzone for drag-and-drop functionality
 
+**Frontend **
+
+1. **Dashboard** 
+<img width="1917" height="899" alt="Screenshot 2025-08-09 150106" src="https://github.com/user-attachments/assets/fd967574-34a7-4b11-b97d-e7eeab7dbc18" />
+<img width="1875" height="798" alt="Screenshot 2025-08-09 150057" src="https://github.com/user-attachments/assets/37b48390-b229-44ed-8189-ae6866ad42e5" />
+2. **Analytics **
+   
+   <img width="1919" height="585" alt="Screenshot 2025-08-09 145954" src="https://github.com/user-attachments/assets/b49c9334-4afb-4241-83d3-13dfb0f6dc48" />
+   
+4. **Documentation**
+   
+<img width="1867" height="804" alt="Screenshot 2025-08-09 150018" src="https://github.com/user-attachments/assets/dabd15f4-9dd1-47a0-8633-da76c5065d50" />
+
 ## 📦 Installation
 
 ### Prerequisites
